@@ -64,8 +64,15 @@ func (h *Handler) CreatePreference(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := _v.Struct(preference); err != nil {
-		w.WriteHeader(http.StatusUnprocessableEntity)
+		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, fmt.Sprintf("validation error: %v", err))
+	}
+
+	for _, i := range preference.Items {
+		if err := _v.Struct(i); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, fmt.Sprintf("validation error: %v", err))
+		}
 	}
 
 	checkoutURL, err := h.Service.CreatePreference(preference)
