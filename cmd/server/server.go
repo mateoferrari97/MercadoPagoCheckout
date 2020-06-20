@@ -2,6 +2,7 @@ package server
 
 import (
 	"github.com/gorilla/mux"
+	"log"
 	"net/http"
 )
 
@@ -14,7 +15,17 @@ func NewServer() *Server{
 }
 
 func (s *Server) Run(port string) {
-	http.ListenAndServe(port, s.server)
+	if port == "" {
+		port = "8081"
+		log.Printf("defaulting to port %s", port)
+	}
+
+	if string(port[0]) == ":" {
+		port = port[1:]
+	}
+
+	log.Printf("Listening on port %s", port)
+	http.ListenAndServe(":" + port, s.server)
 }
 
 func (s *Server) HandleFunc(path string, method string, h http.HandlerFunc) {

@@ -4,6 +4,7 @@ import (
 	"github.com/mateoferrari97/mercadopago/cmd/internal"
 	"github.com/mateoferrari97/mercadopago/cmd/server"
 	"net/http"
+	"os"
 )
 
 func main() {
@@ -16,5 +17,6 @@ func main() {
 	server.HandleFunc("/access_token", "GET", handler.GetAccessToken)
 	server.HandleFunc("/preferences", "POST", handler.CreatePreference)
 
-	server.Run(":8081")
+	port := os.Getenv("PORT")
+	server.Run(port)
 }
