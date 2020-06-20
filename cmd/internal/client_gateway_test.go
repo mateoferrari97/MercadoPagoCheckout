@@ -2,6 +2,7 @@ package internal
 
 import (
 	"bytes"
+	"errors"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"net/http"
@@ -81,6 +82,22 @@ func TestGateway_GetAccessToken_UnmarshalError(t *testing.T) {
 	require.EqualError(t, err, "json: cannot unmarshal number into Go struct field .access_token of type string")
 }
 
+func TestGateway_GetAccessToken_DoError(t *testing.T) {
+	// Given
+	c := &ClientStub{}
+	g := &Gateway{Client: c}
+	c.err = errors.New("do error")
+	// When
+	_, err := g.GetAccessToken(Credentials{
+		ClientID:     "ABC123",
+		ClientSecret: "123ABC",
+	})
+
+	// Then
+	require.Error(t, err)
+	require.EqualError(t, err, "do error")
+}
+
 func TestGateway_CreatePreference(t *testing.T) {
 	// Given
 	c := &ClientStub{}
@@ -130,6 +147,19 @@ func TestGateway_CreatePreference_UnmarshalError(t *testing.T) {
 	// Then
 	require.Error(t, err)
 	require.EqualError(t, err, "json: cannot unmarshal number into Go struct field .init_point of type string")
+}
+
+func TestGateway_CreatePreference_DoError(t *testing.T) {
+	// Given
+	c := &ClientStub{}
+	g := &Gateway{Client: c}
+	c.err = errors.New("do error")
+	// When
+	_, err := g.CreatePreference(newPreference())
+
+	// Then
+	require.Error(t, err)
+	require.EqualError(t, err, "do error")
 }
 
 func newPreference() NewPreference {
