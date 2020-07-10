@@ -47,7 +47,7 @@ func (g *Gateway) GetAccessToken(credentials Credentials) (string, error) {
 		return "", err
 	}
 
-	if resp.StatusCode >= 400 {
+	if resp.StatusCode >= http.StatusBadRequest {
 		return "", NewError(string(body), resp.StatusCode)
 	}
 
@@ -87,7 +87,7 @@ func (g *Gateway) CreatePreference(accessToken string, preference NewPreference)
 		return "", err
 	}
 
-	if resp.StatusCode >= 400 {
+	if resp.StatusCode >= http.StatusBadRequest {
 		return "", NewError(string(body), resp.StatusCode)
 	}
 
