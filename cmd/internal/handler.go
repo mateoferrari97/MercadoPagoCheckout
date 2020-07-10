@@ -12,6 +12,7 @@ var _v = validator.New()
 type Service interface {
 	GetAccessToken(clientID string, clientSecret string) (string, error)
 	CreatePreference(accessToken string, preference NewPreference) (string, error)
+	GetTotalPayments(accessToken string, status string) (int, error)
 }
 
 type Handler struct {
@@ -94,6 +95,38 @@ func (h *Handler) CreatePreference(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, fmt.Sprintf("%s", checkoutURL))
+}
+
+func (h *Handler) GetTotalPayments(w http.ResponseWriter, r *http.Request) {
+	accessToken := r.Header.Get("access_token")
+	if accessToken == "" {
+		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprintf(w, fmt.Sprintf("access token is required"))
+		return
+	}
+
+	status := r.URL.Query().Get("status")
+	if status == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, fmt.Sprintf("status is required"))
+		return
+	}
+
+	if status != "approved" && status != "rejected" && status != "pending" {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, fmt.Sprintf("invalid status: got: %s, want: approved, rejected or pending", status))
+		return
+	}
+
+	total, err := h.Service.GetTotalPayments(accessToken, status)
+	if err != nil {
+		w.WriteHeader(getStatusCodeFromError(err))
+		fmt.Fprintf(w, fmt.Sprintf("couldn't get total payments: %v", err))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, fmt.Sprintf("total payments: %d", total))
 }
 
 func getStatusCodeFromError(err error) int {

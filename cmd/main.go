@@ -16,6 +16,7 @@ func main() {
 	server.HandleFunc("/ping", "GET", handler.Ping)
 	server.HandleFunc("/access_token", "GET", handler.GetAccessToken)
 	server.HandleFunc("/preferences", "POST", handler.CreatePreference)
+	server.HandleFunc("/total_payments", "GET", handler.GetTotalPayments)
 
 	port := os.Getenv("PORT")
 	server.Run(port)

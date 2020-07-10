@@ -101,3 +101,47 @@ func (g *Gateway) CreatePreference(accessToken string, preference NewPreference)
 
 	return r.CheckoutURL, nil
 }
+
+func (g *Gateway) GetTotalPayments(accessToken string, status string) (int, error) {
+	queryValues := &url.Values{}
+	queryValues.Add("limit", "1")
+	queryValues.Add("offset", "0")
+	queryValues.Add("access_token", accessToken)
+
+	if status != "" {
+		queryValues.Add("status", status)
+	}
+
+	queryParams := queryValues.Encode()
+
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s%s%s", _baseURL, "/v1/payments/search?", queryParams), nil)
+	if err != nil {
+		return 0, err
+	}
+
+	resp, err := g.Client.Do(req)
+	if err != nil {
+		return 0, err
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return 0, err
+	}
+
+	if resp.StatusCode >= http.StatusBadRequest {
+		return 0, NewError(string(body), resp.StatusCode)
+	}
+
+	var r struct {
+		Paging struct {
+			TotalPayments int `json:"total"`
+		} `json:"paging"`
+	}
+
+	if err := json.Unmarshal(body, &r); err != nil {
+		return 0, err
+	}
+
+	return r.Paging.TotalPayments, nil
+}

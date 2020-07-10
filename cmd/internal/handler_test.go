@@ -14,6 +14,7 @@ import (
 type ServiceStub struct {
 	accessToken string
 	checkout string
+	totalPayments int
 	err error
 }
 
@@ -23,6 +24,10 @@ func (s *ServiceStub) GetAccessToken(_ string, _ string) (string, error) {
 
 func (s *ServiceStub) CreatePreference(_ string, _ NewPreference) (string, error) {
 	return s.checkout, s.err
+}
+
+func (s *ServiceStub) GetTotalPayments(_ string, _ string) (int, error) {
+	return s.totalPayments, s.err
 }
 
 func TestHandler_GetAccessToken(t *testing.T) {
@@ -561,4 +566,98 @@ func TestHandler_CreatePreference_ClientError(t *testing.T) {
 			require.Equal(t, tc.wantErrorStatusCode, resp.StatusCode)
 		})
 	}
+}
+
+func TestHandler_GetTotalPayments(t *testing.T) {
+	// Given
+	h := NewHandler(&ServiceStub{
+		totalPayments: 100,
+	})
+	ts := httptest.NewServer(http.HandlerFunc(h.GetTotalPayments))
+	defer ts.Close()
+
+	// When
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/total_payments?status=approved", ts.URL), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req.Header.Add("access_token", "MY_ACCESS_TOKEN")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Then
+	require.Equal(t, "total payments: 100", string(b))
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+func TestHandler_GetTotalPayments_Unauthorized_Error(t *testing.T) {
+	// Given
+	h := NewHandler(&ServiceStub{
+		totalPayments: 100,
+	})
+	ts := httptest.NewServer(http.HandlerFunc(h.GetTotalPayments))
+	defer ts.Close()
+
+	// When
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/total_payments?status=approved", ts.URL), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Then
+	require.Equal(t, "access token is required", string(b))
+	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+}
+
+func TestHandler_GetTotalPayments_BadRequest_Error(t *testing.T) {
+	// Given
+	h := NewHandler(&ServiceStub{
+		totalPayments: 100,
+	})
+	ts := httptest.NewServer(http.HandlerFunc(h.GetTotalPayments))
+	defer ts.Close()
+
+	// When
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/total_payments?status=random", ts.URL), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req.Header.Add("access_token", "MY_ACCESS_TOKEN")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Then
+	require.Equal(t, "invalid status: got: random, want: approved, rejected or pending", string(b))
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 }

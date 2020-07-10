@@ -3,6 +3,7 @@ package internal
 type ClientGateway interface {
 	GetAccessToken(credentials Credentials) (string, error)
 	CreatePreference(accessToken string, preference NewPreference) (string, error)
+	GetTotalPayments(accessToken string, status string) (int, error)
 }
 
 type Controller struct {
@@ -24,4 +25,8 @@ func (s *Controller) GetAccessToken(clientID string, clientSecret string) (strin
 
 func (s *Controller) CreatePreference(accessToken string, preference NewPreference) (string, error) {
 	return s.Client.CreatePreference(accessToken, preference)
+}
+
+func (s *Controller) GetTotalPayments(accessToken string, status string) (int, error) {
+	return s.Client.GetTotalPayments(accessToken, status)
 }
