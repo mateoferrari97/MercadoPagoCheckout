@@ -108,7 +108,7 @@ func TestGateway_CreatePreference(t *testing.T) {
 		Body:             ioutil.NopCloser(bytes.NewReader([]byte(`{"init_point": "https://mercadopago.com/checkout"}`))),
 	}
 	// When
-	checkout, err := g.CreatePreference(newPreference())
+	checkout, err := g.CreatePreference("", newPreference())
 
 	// Then
 	require.NoError(t, err)
@@ -125,7 +125,7 @@ func TestGateway_CreatePreference_MercadoPagoError(t *testing.T) {
 		Body:             ioutil.NopCloser(bytes.NewReader([]byte(`{"error": "internal server error"}`))),
 	}
 	// When
-	_, err := g.CreatePreference(newPreference())
+	_, err := g.CreatePreference("", newPreference())
 
 	// Then
 	require.Error(t, err)
@@ -142,7 +142,7 @@ func TestGateway_CreatePreference_UnmarshalError(t *testing.T) {
 		Body:             ioutil.NopCloser(bytes.NewReader([]byte(`{"init_point": 1234}`))),
 	}
 	// When
-	_, err := g.CreatePreference(newPreference())
+	_, err := g.CreatePreference("", newPreference())
 
 	// Then
 	require.Error(t, err)
@@ -155,7 +155,7 @@ func TestGateway_CreatePreference_DoError(t *testing.T) {
 	g := &Gateway{Client: c}
 	c.err = errors.New("do error")
 	// When
-	_, err := g.CreatePreference(newPreference())
+	_, err := g.CreatePreference("", newPreference())
 
 	// Then
 	require.Error(t, err)

@@ -21,7 +21,7 @@ func (s *ServiceStub) GetAccessToken(_ string, _ string) (string, error) {
 	return s.accessToken, s.err
 }
 
-func (s *ServiceStub) CreatePreference(_ NewPreference) (string, error) {
+func (s *ServiceStub) CreatePreference(_ string, _ NewPreference) (string, error) {
 	return s.checkout, s.err
 }
 
@@ -204,6 +204,8 @@ func TestHandler_CreatePreference(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	req.Header.Add("access_token", "MY_ACCESS_TOKEN")
+
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)
@@ -218,6 +220,61 @@ func TestHandler_CreatePreference(t *testing.T) {
 	// Then
 	require.Equal(t, "https://mercadopago.com/MY_CHECKOUT_PATH", string(b))
 	require.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+func TestHandler_CreatePreference_UnprocessableEntity_Error(t *testing.T) {
+	// Given
+	h := NewHandler(&ServiceStub{
+		checkout: "https://mercadopago.com/MY_CHECKOUT_PATH",
+	})
+	body := []byte(`{
+		"items": [
+			{
+				"title": "Libro Sherlock Holmes 1era edicion",
+				"description": "Nuevo libro de sherlock holmes 2020",
+				"quantity": "1",
+				"unit_price": 150.70,
+				"picture_url": "https://www.comunidadbaratz.com/wp-content/uploads/Instrucciones-a-tener-en-cuenta-sobre-como-se-abre-un-libro-nuevo.jpg"
+			}
+   	 	],
+		"payer": {
+			"name": "Mateo",
+			"email": "mateo.ferrari@gmail.com",
+			"phone": {
+				"number": "11111111"
+			},
+			"address": {
+				"street": "posta",
+				"number": 4789
+			},
+			"date_created": "14-06-2020"
+		}
+	}`)
+	ts := httptest.NewServer(http.HandlerFunc(h.CreatePreference))
+	defer ts.Close()
+
+	// When
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/preferences", ts.URL), bytes.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req.Header.Add("access_token", "MY_ACCESS_TOKEN")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Then
+	require.Equal(t, "couldn't decode body: json: cannot unmarshal string into Go struct field Item.items.quantity of type int", string(b))
+	require.Equal(t, http.StatusUnprocessableEntity, resp.StatusCode)
 }
 
 func TestHandler_CreatePreference_BadRequest_Error(t *testing.T) {
@@ -363,7 +420,59 @@ func TestHandler_CreatePreference_BadRequest_Error(t *testing.T) {
 	}
 }
 
-func TestHandler_CreatePreference_Error(t *testing.T) {
+func TestHandler_CreatePreference_Unauthorized_Error(t *testing.T) {
+	// Given
+	h := NewHandler(&ServiceStub{})
+	ts := httptest.NewServer(http.HandlerFunc(h.CreatePreference))
+	defer ts.Close()
+
+	body := []byte(`{
+		"items": [
+			{
+				"title": "Libro Sherlock Holmes 1era edicion",
+				"description": "Nuevo libro de sherlock holmes 2020",
+				"quantity": 1,
+				"unit_price": 150.70,
+				"picture_url": "https://www.comunidadbaratz.com/wp-content/uploads/Instrucciones-a-tener-en-cuenta-sobre-como-se-abre-un-libro-nuevo.jpg"
+			}
+   	 	],
+		"payer": {
+			"name": "Mateo",
+			"email": "mateo.ferrari@gmail.com",
+			"phone": {
+				"number": "11111111"
+			},
+			"address": {
+				"street": "posta",
+				"number": 4789
+			},
+			"date_created": "14-06-2020"
+		}
+	}`)
+
+	// When
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/preferences", ts.URL), bytes.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Then
+	require.Equal(t, "access token is required", string(b))
+	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+}
+
+func TestHandler_CreatePreference_ClientError(t *testing.T) {
 	tt := []struct{
 		name string
 		err error
@@ -433,6 +542,8 @@ func TestHandler_CreatePreference_Error(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+
+			req.Header.Add("access_token", "MY_ACCESS_TOKEN")
 
 			resp, err := http.DefaultClient.Do(req)
 			if err != nil {

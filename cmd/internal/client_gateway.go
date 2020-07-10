@@ -62,10 +62,10 @@ func (g *Gateway) GetAccessToken(credentials Credentials) (string, error) {
 	return r.AccessToken, nil
 }
 
-func (g *Gateway) CreatePreference(preference NewPreference) (string, error) {
-	path := &url.Values{}
-	path.Add("access_token", "TEST-8061174803675745-051607-b62d65a0b00d9185b30d1487725b0ab9-189062419")
-	queryParams := path.Encode()
+func (g *Gateway) CreatePreference(accessToken string, preference NewPreference) (string, error) {
+	queryValues := &url.Values{}
+	queryValues.Add("access_token", accessToken)
+	queryParams := queryValues.Encode()
 
 	b, err := json.Marshal(preference)
 	if err != nil {

@@ -11,7 +11,7 @@ var _v = validator.New()
 
 type Service interface {
 	GetAccessToken(clientID string, clientSecret string) (string, error)
-	CreatePreference(preference NewPreference) (string, error)
+	CreatePreference(accessToken string, preference NewPreference) (string, error)
 }
 
 type Handler struct {
@@ -58,7 +58,7 @@ func (h *Handler) GetAccessToken(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) CreatePreference(w http.ResponseWriter, r *http.Request) {
 	var preference NewPreference
 	if err := json.NewDecoder(r.Body).Decode(&preference); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		w.WriteHeader(http.StatusUnprocessableEntity)
 		fmt.Fprintf(w, "couldn't decode body: %v", err)
 		return
 	}
@@ -66,16 +66,26 @@ func (h *Handler) CreatePreference(w http.ResponseWriter, r *http.Request) {
 	if err := _v.Struct(preference); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, fmt.Sprintf("validation error: %v", err))
+		return
 	}
 
 	for _, i := range preference.Items {
 		if err := _v.Struct(i); err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			fmt.Fprintf(w, fmt.Sprintf("validation error: %v", err))
+			return
 		}
 	}
 
-	checkoutURL, err := h.Service.CreatePreference(preference)
+
+	accessToken := r.Header.Get("access_token")
+	if accessToken == "" {
+		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprintf(w, fmt.Sprintf("access token is required"))
+		return
+	}
+
+	checkoutURL, err := h.Service.CreatePreference(accessToken, preference)
 	if err != nil {
 		w.WriteHeader(getStatusCodeFromError(err))
 		fmt.Fprintf(w, "couldn't create checkout: %v", err)
