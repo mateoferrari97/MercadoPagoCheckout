@@ -107,10 +107,7 @@ func (g *Gateway) GetTotalPayments(accessToken string, status string) (int, erro
 	queryValues.Add("limit", "1")
 	queryValues.Add("offset", "0")
 	queryValues.Add("access_token", accessToken)
-
-	if status != "" {
-		queryValues.Add("status", status)
-	}
+	queryValues.Add("status", status)
 
 	queryParams := queryValues.Encode()
 
